@@ -3,17 +3,20 @@ import { TaskFormComponent } from './task-form.component';
 import { ReactiveFormsModule } from '@angular/forms';
 import { TaskService } from '../../services/task.service';
 import { of } from 'rxjs';
-import { Router } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
+import { MatFormFieldModule } from '@angular/material/form-field';
 
 describe('TaskFormComponent', () => {
   let component: TaskFormComponent;
   let fixture: ComponentFixture<TaskFormComponent>;
   let mockTaskService: jasmine.SpyObj<TaskService>;
   let mockRouter: jasmine.SpyObj<Router>;
+  let activatedRoute: ActivatedRoute;
 
   beforeEach(() => {
     mockTaskService = jasmine.createSpyObj<TaskService>('TaskService', ['createTask', 'getTask', 'updateTask', 'deleteTask']);
     mockRouter = jasmine.createSpyObj<Router>('Router', ['navigate']);
+    activatedRoute = new ActivatedRoute();
 
     mockTaskService.getTask.and.returnValue(of({
       id: 1,
@@ -25,10 +28,17 @@ describe('TaskFormComponent', () => {
     }));
 
     TestBed.configureTestingModule({
-      imports: [ReactiveFormsModule],
+      imports: [ReactiveFormsModule,MatFormFieldModule],
       declarations: [TaskFormComponent],
       providers: [
         { provide: TaskService, useValue: mockTaskService },
+        { provide: ActivatedRoute, useValue: {
+            snapshot: {
+              paramMap: convertToParamMap({
+                id: '1'
+              })
+            }
+          } },
         { provide: Router, useValue: mockRouter }
       ]
     }).compileComponents();
