@@ -1,0 +1,81 @@
+name: CI/CD Frontend
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Run unit tests
+        run: npx ng test --watch=false --browsers=ChromeHeadless
+
+  build-and-deploy:
+    needs: test
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - run: npm ci
+
+      # Connexion à Azure pour pouvoir interroger l'App Service du backend.
+      # AZURE_CREDENTIALS = JSON d'un service principal
+      # (az ad sp create-for-rbac --sdk-auth), stocké en secret de repo.
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # Récupération dynamique de l'URL du backend déjà déployé sur Azure.
+      # AZURE_BACKEND_APP_NAME / AZURE_RESOURCE_GROUP sont des variables de
+      # repo (Settings > Secrets and variables > Actions > Variables), non
+      # sensibles, à adapter au nom réel de vos ressources Azure.
+      - name: Get backend URL from Azure
+        id: backend-url
+        run: |
+          HOSTNAME=$(az webapp show \
+            --name "${{ vars.AZURE_BACKEND_APP_NAME }}" \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --query defaultHostName -o tsv)
+          echo "url=https://$HOSTNAME/api" >> "$GITHUB_OUTPUT"
+
+      - name: Generate environment.prod.ts
+        run: |
+          cat > src/environments/environment.prod.ts <<EOF
+          export const environment = {
+            production: true,
+            apiUrl: '${{ steps.backend-url.outputs.url }}'
+          };
+          EOF
+
+      - name: Build production bundle
+        run: npx ng build --configuration production
+
+      # TODO: adapter cette étape une fois le mode de packaging du frontend
+      # décidé (image Docker poussée sur ACR + Azure Container Apps/Web App
+      # for Containers, ou déploiement statique). Exemple avec un Web App
+      # classique via publish profile :
+      # - name: Deploy to Azure Web App
+      #   uses: azure/webapps-deploy@v3
+      #   with:
+      #     app-name: ${{ vars.AZURE_FRONTEND_APP_NAME }}
+      #     publish-profile: ${{ secrets.AZURE_FRONTEND_PUBLISH_PROFILE }}
+      #     package: dist/frontend
