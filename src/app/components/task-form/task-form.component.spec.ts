@@ -12,8 +12,17 @@ describe('TaskFormComponent', () => {
   let mockRouter: jasmine.SpyObj<Router>;
 
   beforeEach(() => {
-    mockTaskService = jasmine.createSpyObj<TaskService>('TaskService', ['createTask']);
+    mockTaskService = jasmine.createSpyObj<TaskService>('TaskService', ['createTask', 'getTask', 'updateTask', 'deleteTask']);
     mockRouter = jasmine.createSpyObj<Router>('Router', ['navigate']);
+
+    mockTaskService.getTask.and.returnValue(of({
+      id: 1,
+      nom: 'Tâche existante',
+      description: 'Description',
+      statut: 'à faire',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }));
 
     TestBed.configureTestingModule({
       imports: [ReactiveFormsModule],
