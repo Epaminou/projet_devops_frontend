@@ -1,22 +1,48 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TaskFormComponent } from './task-form.component';
-import { ReactiveFormsModule } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
 import { TaskService } from '../../services/task.service';
 import { of } from 'rxjs';
 import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
 
 describe('TaskFormComponent', () => {
   let component: TaskFormComponent;
   let fixture: ComponentFixture<TaskFormComponent>;
   let mockTaskService: jasmine.SpyObj<TaskService>;
   let mockRouter: jasmine.SpyObj<Router>;
-  let activatedRoute: ActivatedRoute;
 
-  beforeEach(() => {
-    mockTaskService = jasmine.createSpyObj<TaskService>('TaskService', ['createTask', 'getTask', 'updateTask', 'deleteTask']);
-    mockRouter = jasmine.createSpyObj<Router>('Router', ['navigate']);
-    activatedRoute = new ActivatedRoute();
+  beforeEach(async () => {
+    mockTaskService = jasmine.createSpyObj('TaskService', [
+      'createTask',
+      'getTask',
+      'updateTask',
+      'deleteTask'
+    ]);
+    mockRouter = jasmine.createSpyObj('Router', ['navigate']);
+
+    // Configure tous les retours de mock AVANT de créer le composant
+    mockTaskService.createTask.and.returnValue(of({
+      id: 1,
+      nom: 'Nouvelle tâche',
+      description: 'Description ici',
+      statut: 'à faire',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }));
+
+    mockTaskService.updateTask.and.returnValue(of({
+      id: 1,
+      nom: 'Tâche modifiée',
+      description: 'Description ici',
+      statut: 'à faire',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }));
 
     mockTaskService.getTask.and.returnValue(of({
       id: 1,
@@ -27,16 +53,22 @@ describe('TaskFormComponent', () => {
       updatedAt: new Date().toISOString()
     }));
 
-    TestBed.configureTestingModule({
-      imports: [ReactiveFormsModule,MatFormFieldModule],
+    await TestBed.configureTestingModule({
+      imports: [
+        ReactiveFormsModule,
+        MatFormFieldModule,
+        MatSelectModule,
+        MatInputModule,
+        MatButtonModule,
+        NoopAnimationsModule
+      ],
       declarations: [TaskFormComponent],
       providers: [
+        FormBuilder,
         { provide: TaskService, useValue: mockTaskService },
         { provide: ActivatedRoute, useValue: {
             snapshot: {
-              paramMap: convertToParamMap({
-                id: '1'
-              })
+              paramMap: convertToParamMap({})
             }
           } },
         { provide: Router, useValue: mockRouter }
@@ -52,25 +84,32 @@ describe('TaskFormComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should call createTask on form submit', () => {
-    component.taskForm.setValue({
+  it('should call createTask on form submit for new task', () => {
+    component.taskForm.patchValue({
       nom: 'Nouvelle tâche',
       description: 'Description ici',
       statut: 'à faire'
     });
 
-    mockTaskService.createTask.and.returnValue(of({
-      id: 1,
+    component.onSubmit();
+
+    expect(mockTaskService.createTask).toHaveBeenCalledWith({
       nom: 'Nouvelle tâche',
       description: 'Description ici',
-      statut: 'à faire',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }));
+      statut: 'à faire'
+    });
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/']);
+  });
+
+  it('should not submit if form is invalid', () => {
+    component.taskForm.patchValue({
+      nom: '',
+      description: 'Description ici',
+      statut: 'à faire'
+    });
 
     component.onSubmit();
 
-    expect(mockTaskService.createTask).toHaveBeenCalled();
-    expect(mockRouter.navigate).toHaveBeenCalledWith(['/tasks']);
+    expect(mockTaskService.createTask).not.toHaveBeenCalled();
   });
 });

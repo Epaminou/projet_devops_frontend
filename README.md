@@ -35,7 +35,7 @@ npm install
 ### ▶️ Démarrage du serveur de développement
 
 ```bash
-ng serve
+npm start
 ```
 
 L'application sera accessible à l'adresse : [http://localhost:4200](http://localhost:4200)
@@ -45,7 +45,7 @@ L'application sera accessible à l'adresse : [http://localhost:4200](http://loca
 ## 🧪 Tests unitaires
 
 ```bash
-ng test
+npm test
 ```
 
 Cela lance les tests unitaires avec **Karma** et **Jasmine**. Les tests sont définis dans les fichiers `*.spec.ts` à côté de chaque composant, service ou module testé.
