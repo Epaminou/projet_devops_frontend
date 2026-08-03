@@ -59,3 +59,5 @@ jobs:
       # Construit l’application Angular en mode production
       - name: Construire le bundle de production
         run: npx ng build --configuration production
+
+# TODO: construire l'image Docker du frontend, la pousser vers GHCR et la déployer sur AKS
